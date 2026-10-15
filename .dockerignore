@@ -1,0 +1,17 @@
+.git/
+.gitignore
+.specify/
+.claude/
+.claude
+.venv/
+venv/
+__pycache__/
+*.pyc
+specs/
+compose.yaml
+Dockerfile
+.dockerignore
+*.md
+!README.md
+.env*
+uv.lock

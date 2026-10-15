@@ -1,0 +1,11 @@
+[project]
+name = "improve-lessons-backend"
+version = "0.1.0"
+description = "Multi-user FastAPI backend for personalized English learning."
+requires-python = ">=3.14"
+
+[tool.uv]
+package = false
+
+# Standard test command (plan.md § Technical Context):
+#   python -m unittest discover -s tests

@@ -1,0 +1,3 @@
+# Test-only dependencies. MUST NOT be installed into the "runtime" Docker
+# target or shipped in any production image (plan.md § Docker image strategy).
+vcrpy
