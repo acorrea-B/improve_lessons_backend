@@ -1,0 +1,62 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  localstack:
+    # Pinned community edition (3.x): the `latest` tag checks a pro license.
+    image: localstack/localstack:3.5
+    environment:
+      - SERVICES=secretsmanager,ses
+      - DEBUG=0
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal secretsmanager list-secrets >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build:
+      context: .
+      target: dev
+    environment:
+      - APP_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=improve_lessons
+      - SECRETS_PROVIDER=localstack
+      - SECRETS_ENDPOINT_URL=http://localstack:4566
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+  # Test runner: `docker compose run --rm test` (quickstart.md § 3)
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    environment:
+      - APP_ENV=test
+      - MONGODB_URI=mongodb://host.docker.internal:27017
+      - MONGODB_DATABASE=improve_lessons_test
+    command: ["python", "-m", "unittest", "discover", "-s", "tests"]
+
+volumes:
+  mongodb_data:
+  localstack_data:

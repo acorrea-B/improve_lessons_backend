@@ -1,0 +1,29 @@
+interactions:
+- request:
+    body: '{"Action":"SendEmail","Source":"no-reply@localhost","Destination.ToAddresses.member.1":"rem@example.com","Message.Subject.Data":"Study reminder","Message.Body.Text.Data":"body","Version":"2010-12-01"}'
+    headers:
+      accept-encoding:
+      - identity
+      content-type:
+      - application/json
+      host:
+      - localhost:4566
+    method: POST
+    path: /
+    uri: http://localhost:4566/
+  response:
+    body:
+      string: '{"SendEmailResponse":{"SendEmailResult":{"MessageId":"localstack-emulated-00000000-0000-0000-0000-000000000000"},"ResponseMetadata":{"RequestId":"8f4ff0c4-0000-0000-0000-000000000000"}}}'
+    headers:
+      content-type:
+      - text/html; charset=utf-8
+      date:
+      - Wed, 14 Oct 2026 12:00:00 GMT
+      server:
+      - hypercorn-python
+      x-amzn-requestid:
+      - 8f4ff0c4-0000-0000-0000-000000000000
+    status:
+      code: 200
+      message: OK
+version: 1
