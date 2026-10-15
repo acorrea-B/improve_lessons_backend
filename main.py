@@ -19,6 +19,7 @@ from app.adapters.external.ai.deterministic_ai import (
     DeterministicEmbeddingProvider,
 )
 from app.adapters.external.ai.local_vector_search import LocalVectorSearch
+from app.adapters.external.notifications.local_mail_bridge import LocalMailBridge
 from app.adapters.external.notifications.localstack_email_sender import (
     InMemoryEmailSender,
 )
@@ -105,16 +106,32 @@ class Container:
         # Email delivery by the environment: development goes through the
         # LocalStack-parameterized SES client, non-development/test (real
         # AWS) through the basic IAM-resolved client; the unit-test
-        # environment keeps the in-memory fake (no network).
+        # environment keeps the in-memory fake (no network). In development,
+        # when SMTP_HOST is configured, the SES sender is decorated with a
+        # bridge that forwards the same message to a real SMTP server so
+        # reminders land in an actual mailbox (compose passes SMTP_HOST
+        # through; empty = bridge disabled, identical behavior).
         if settings.app_env == "test":
             self.email_sender: InMemoryEmailSender | Boto3SESEmailSender = (
                 InMemoryEmailSender()
             )
         else:
-            self.email_sender = Boto3SESEmailSender(
+            ses_sender = Boto3SESEmailSender(
                 sender_address=settings.ses_sender_email,
                 region_name=settings.aws_region,
                 aws_settings=aws_client_credentials(settings.app_env),
+            )
+            self.email_sender = (
+                LocalMailBridge(
+                    ses_sender,
+                    smtp_host=settings.smtp_host,
+                    smtp_port=settings.smtp_port,
+                    smtp_user=settings.smtp_user,
+                    smtp_password=settings.smtp_password,
+                    sender_address=settings.ses_sender_email,
+                )
+                if settings.app_env == "development" and settings.smtp_host
+                else ses_sender
             )
 
         # Repositories (persistence adapters)
@@ -266,12 +283,17 @@ class Container:
             await _signing_key(self.secret_provider),
             token_ttl_seconds=self.settings.auth_token_ttl_seconds,
         )
-        if isinstance(self.email_sender, Boto3SESEmailSender):
+        ses_sender = (
+            self.email_sender.inner
+            if isinstance(self.email_sender, LocalMailBridge)
+            else self.email_sender
+        )
+        if isinstance(ses_sender, Boto3SESEmailSender):
             # Production: a client that cannot be built fails startup (fail
             # fast). Locally: contained, the sender rebuilds the client and
             # retries on the first deliverable email.
             try:
-                await self.email_sender.prime()
+                await ses_sender.prime()
             except Exception as exc:
                 if self.settings.app_env not in ("development", "test"):
                     raise

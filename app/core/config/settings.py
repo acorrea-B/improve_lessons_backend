@@ -57,6 +57,13 @@ class Settings:
     ses_sender_email: str = field(
         default_factory=lambda: os.getenv("SES_SENDER_EMAIL", "no-reply@localhost")
     )
+    # Real-email bridge (development only): SMTP_HOST="" disables the
+    # LocalMailBridge. smtp_user/smtp_password enable STARTTLS+login for
+    # servers that require auth (an internal postfix usually does not).
+    smtp_host: str = field(default_factory=lambda: os.getenv("SMTP_HOST", ""))
+    smtp_port: int = field(default_factory=lambda: int(os.getenv("SMTP_PORT", "25")))
+    smtp_user: str = field(default_factory=lambda: os.getenv("SMTP_USER", ""))
+    smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
 
     def validate_mandatory(self) -> "Settings":
         """Refuse to start when mandatory configuration is missing."""

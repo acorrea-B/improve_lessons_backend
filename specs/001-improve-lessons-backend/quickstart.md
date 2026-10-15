@@ -181,6 +181,33 @@ The list MUST include every secret required by the application
 configuration. `scripts/init-localstack.sh` is the single source of
 truth for the secret names; running it twice is safe.
 
+## 6b. Receiving REAL emails locally (SES → SMTP bridge)
+
+LocalStack community SES accepts `SendEmail` but never delivers to a real
+mailbox. In development, when `SMTP_HOST` is configured, the backend
+decorates the SES sender with a bridge that forwards the same message to a
+real SMTP server (internal postfix/mailutils, etc.) — so reminder emails
+produced by local functional tests land in an actual inbox. `SMTP_HOST=""
+`` (the default) disables the bridge and keeps behavior identical.
+
+```bash
+# Point the backend at an SMTP target (example: a debug receiver on the host)
+SMTP_HOST=host.docker.internal SMTP_PORT=1025 docker compose up -d --build backend
+
+# Or forward to a remote postfix instance
+SMTP_HOST=<your-smtp-server> SMTP_PORT=25 docker compose up -d backend
+```
+
+- Both channels run independently with contained failures: the SES leg
+  (LocalStack `SendEmail`, visible via `MessageId` in the logs) is always
+  attempted, then the real SMTP forward; neither failure blocks the other.
+- `SMTP_USER`/`SMTP_PASSWORD` enable STARTTLS + login for SMTP servers
+  that require auth; an internal postfix usually needs none.
+- Success lines in the backend logs: `email delivered | to=... message_id=...`
+  (SES channel) and `email delivered | to=... channel=smtp` (real forward).
+- A throwaway debug receiver for quick verification (tool, not a project
+  dependency): `uvx aiosmtpd -n -l 0.0.0.0:1025`.
+
 ## 7. Resetting the environment
 
 ```bash
