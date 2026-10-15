@@ -9,7 +9,6 @@ interactions:
       host:
       - localhost:4566
     method: POST
-    path: /
     uri: http://localhost:4566/
   response:
     body:

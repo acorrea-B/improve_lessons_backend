@@ -168,6 +168,35 @@ amendments and tracked by `tasks.md`):
   `datetime.now(` or `pytz` or `astimezone()` to a local zone appears
   in `app/` outside `app/core/time/`.
 
+### Senior-Level Engineering Criteria — Non-Negotiable
+
+Every piece of code written in this project MUST meet senior-developer
+standard. The rules below are stated as general criteria; the AWS client
+configuration items are concrete examples, not the whole scope — the
+criteria as a whole bind all code written now and in the future.
+
+| # | Principle | Rule |
+|---|---|---|
+| 1 | **DRY (Don't Repeat Yourself)** | Suggested code MUST NOT violate DRY. A single source of truth shared by all usage sites; duplication is a defect. *Example (binding):* the AWS client kwargs dict lives only in `app/core/config/settings.py` (`LOCALSTACK_AWS_CREDENTIALS` + `aws_client_credentials`) — duplicating it in adapters or concrete clients is forbidden. This example illustrates the general criterion, which applies to any code written. |
+| 2 | **Environment decides environment-specific configuration** | When a configuration is specific to an environment, the decision input is the environment (`APP_ENV`), not a URL or any incidental value: `APP_ENV=development` (LocalStack parameterization; the `endpoint_url` lives inside the shared dict) vs. every other environment (empty dict, basic client). |
+| 3 | **Production uses IAM — design for local-vs-cloud parity** | Every AWS (or private-cloud) client is written without explicit credentials or emulator artifacts: in production the IAM credential chain resolves auth and the region resolves the endpoint. No round-trips to Secrets Manager to authenticate SDK clients. Any new external-service implementation MUST contemplate both scenarios — local/emulated and real cloud — designed in together, so the same code runs in either environment. |
+| 4 | **`__init__.py` never carries functional code** | Package `__init__` files are import-only re-export facades (+ `__all__`). All definitions (Settings, constants, helpers) live in their own modules (e.g., `settings.py`). Defining Settings or any helper inside `__init__` is a bad practice and breaks project legibility. |
+| 5 | **Config → composition root → adapters** | Environment-dependent decisions are made exactly once, in the composition root (`main.py::Container`), and injected pre-computed into adapters; adapters contain no environment-selection logic. Future AWS clients are integrated as `boto3.client("<service>", **aws_settings)`. |
+
+**Acceptance criteria**:
+
+- No duplicated configuration source for AWS (or any shared) client
+  initialization; the shared dict + helper is the only source.
+- Client-flavor selection (local emulated vs. real cloud) is driven by
+  `APP_ENV` and only by `APP_ENV`.
+- No SDK client in the codebase passes hardcoded credentials; production
+  relies on the IAM credential chain, and Secrets Manager stores only
+  application secrets.
+- `app/**/__init__.py` files contain imports and `__all__` only; a code
+  review against this plan rejects any functional code there.
+- Composition-root injection is the only place where environment-specific
+  client parameters are computed.
+
 ## Project Structure
 
 ### Documentation (this feature)
