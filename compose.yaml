@@ -35,8 +35,11 @@ services:
       - APP_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017
       - MONGODB_DATABASE=improve_lessons
-      - SECRETS_PROVIDER=localstack
+      - SECRETS_PROVIDER=secretsmanager
       - SECRETS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - SES_SENDER_EMAIL=no-reply@local.test
     ports:
       - "8000:8000"
     depends_on:

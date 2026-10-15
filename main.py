@@ -21,9 +21,12 @@ from app.adapters.external.ai.deterministic_ai import (
 from app.adapters.external.ai.local_vector_search import LocalVectorSearch
 from app.adapters.external.notifications.localstack_email_sender import (
     InMemoryEmailSender,
-    LocalStackSESEmailSender,
 )
 from app.adapters.external.auth.token_authenticator import TokenAuthenticator
+from app.adapters.external.aws.secrets_manager_secret_provider import (
+    SecretsManagerSecretProvider,
+)
+from app.adapters.external.aws.ses_email_sender import Boto3SESEmailSender
 from app.adapters.persistence.mongodb.client import MongoClientWrapper
 from app.adapters.persistence.mongodb.repositories import (
     AssistantThreadRepository,
@@ -48,7 +51,7 @@ from app.adapters.persistence.mongodb.repositories import (
 from app.api.v1.dependencies.idempotency import IdempotencyMiddleware
 from app.api.v1.error_handlers import register_error_handlers
 from app.api.v1.router import api_router
-from app.core.config import Settings, get_settings
+from app.core.config import Settings, aws_client_credentials, get_settings
 from app.core.config.secret_provider import build_secret_provider
 from app.core.ports.clock import Clock
 from app.core.strategies import (
@@ -77,6 +80,11 @@ logger = get_logger("main")
 
 TOKEN_SIGNING_SECRET = "improve/auth/token-signing-key"
 
+#: ``SECRETS_PROVIDER`` values routed to the real AWS Secrets Manager SDK
+#: adapter (configured here, in the composition root — core never imports
+#: the adapter; the import-direction lint forbids it).
+AWS_SECRETSMANAGER_PROVIDERS = ("secretsmanager", "aws")
+
 
 class Container:
     """Composition root: concrete adapters → ports → services."""
@@ -84,13 +92,30 @@ class Container:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.mongo = MongoClientWrapper(settings.mongodb_uri, settings.mongodb_database)
-        self.email_sender = InMemoryEmailSender()  # default in development
-        if settings.app_env not in ("development", "test"):
-            settings.secrets_endpoint_url = (
-                settings.secrets_endpoint_url or "http://localhost:4566"
+        if settings.secrets_provider in AWS_SECRETSMANAGER_PROVIDERS:
+            # Real AWS Secrets Manager SDK adapter; the client kwargs come
+            # from the environment: LocalStack parameterization in
+            # development, basic client (IAM) everywhere else.
+            self.secret_provider = SecretsManagerSecretProvider(
+                region_name=settings.aws_region,
+                aws_settings=aws_client_credentials(settings.app_env),
             )
-            self.email_sender = LocalStackSESEmailSender(settings.secrets_endpoint_url)
-        self.secret_provider = build_secret_provider(settings)
+        else:
+            self.secret_provider = build_secret_provider(settings)
+        # Email delivery by the environment: development goes through the
+        # LocalStack-parameterized SES client, non-development/test (real
+        # AWS) through the basic IAM-resolved client; the unit-test
+        # environment keeps the in-memory fake (no network).
+        if settings.app_env == "test":
+            self.email_sender: InMemoryEmailSender | Boto3SESEmailSender = (
+                InMemoryEmailSender()
+            )
+        else:
+            self.email_sender = Boto3SESEmailSender(
+                sender_address=settings.ses_sender_email,
+                region_name=settings.aws_region,
+                aws_settings=aws_client_credentials(settings.app_env),
+            )
 
         # Repositories (persistence adapters)
         self.users = UserRepository(self.mongo)
@@ -241,6 +266,16 @@ class Container:
             await _signing_key(self.secret_provider),
             token_ttl_seconds=self.settings.auth_token_ttl_seconds,
         )
+        if isinstance(self.email_sender, Boto3SESEmailSender):
+            # Production: a client that cannot be built fails startup (fail
+            # fast). Locally: contained, the sender rebuilds the client and
+            # retries on the first deliverable email.
+            try:
+                await self.email_sender.prime()
+            except Exception as exc:
+                if self.settings.app_env not in ("development", "test"):
+                    raise
+                logger.error("ses email sender priming failed | error=%s", exc)
         self.reminder_worker.start()
 
     async def stop(self) -> None:

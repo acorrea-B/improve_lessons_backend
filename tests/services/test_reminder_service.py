@@ -189,7 +189,10 @@ class TestReminderDispatch(unittest.TestCase):
 
         async def scenario():
             sender = LocalStackSESEmailSender("http://localhost:4566")
-            with vcr.use_cassette("tests/vcr_cassettes/reminder_dispatch.yaml"):  # type: ignore[name-defined]
+            # The cassette name is resolved against the configured
+            # CASSETTE_DIR (make_vcr) — no tests/ prefix, which would double
+            # the directory (record mode NONE then fails erratically).
+            with vcr.use_cassette("reminder_dispatch.yaml"):  # type: ignore[name-defined]
                 await sender.send("rem@example.com", "Study reminder", "body")
             return True
 

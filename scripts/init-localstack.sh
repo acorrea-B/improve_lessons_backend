@@ -22,19 +22,32 @@ SECRETS=(
 )
 
 for secret in "${SECRETS[@]}"; do
+  # AWS credentials are never stored in local seeds: production resolves
+  # them via IAM, and the emulator clients take the LocalStack default
+  # pair (test/test) from the adapter — secrets carry no credential here
+  # (plan.md constraint: no real-credential-capable seed values).
+  VALUE="dummy-${secret//\//_}"
   # Create if absent; then force the same dummy value either way, so a
   # second run converges to an identical final state.
   if ! awslocal --endpoint-url="$ENDPOINT" secretsmanager describe-secret \
         --secret-id "$secret" >/dev/null 2>&1; then
     awslocal --endpoint-url="$ENDPOINT" secretsmanager create-secret \
       --name "$secret" \
-      --secret-string "dummy-${secret//\//_}" >/dev/null
+      --secret-string "$VALUE" >/dev/null
   else
     awslocal --endpoint-url="$ENDPOINT" secretsmanager put-secret-value \
       --secret-id "$secret" \
-      --secret-string "dummy-${secret//\//_}" >/dev/null
+      --secret-string "$VALUE" >/dev/null
   fi
   echo "secret ok: $secret"
 done
 
 echo "LocalStack secret initialization complete (idempotent)."
+
+# LocalStack community SES enforces verified identities, exactly like AWS
+# SES. The configured local sender is verified as an identity (idempotent)
+# so the backend can deliver.
+SENDER="${SES_SENDER_EMAIL:-no-reply@local.test}"
+awslocal --endpoint-url="$ENDPOINT" ses verify-email-identity \
+  --email-address "$SENDER" >/dev/null
+echo "ses identity ok: $SENDER"
