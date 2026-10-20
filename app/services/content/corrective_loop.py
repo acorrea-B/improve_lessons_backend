@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, TypedDict
 from langgraph.constants import END, START
 from langgraph.graph.state import StateGraph
 
-from app.core.ports.content_generator import TransientAIError
+from app.core.ports.ai_errors import NonTransientAIError, TransientAIError
 from app.utils.logging import get_logger, report_error, report_info
 
 if TYPE_CHECKING:
@@ -29,13 +29,24 @@ if TYPE_CHECKING:
 
 logger = get_logger("services.content.corrective_loop")
 
+#: The audit event of each non-approved outcome.
+FAILURE_EVENTS = {
+    "bound_exhausted": "content.bound_exhausted",
+    "provider_failed": "content.provider_failed",
+    "rejected": "content.rejected",
+}
+
+
+def failure_event(status: str) -> str:
+    """The audit event type that matches a non-approved loop outcome."""
+    return FAILURE_EVENTS.get(status, "content.rejected")
+
 
 class LoopState(TypedDict):
     instruction: str
     generation_inputs: dict
     bound: int
     attempt: int
-    transient_retries: int
     generation: object  # GeneratedContent
     evaluation: object  # EvaluationResult
     status: str  # approved | rejected | bound_exhausted
@@ -78,9 +89,10 @@ class CorrectiveLoop:
         graph.add_edge(START, "generate")
         graph.add_conditional_edges(
             "generate",
-            lambda state: "skip_to_end" if state["status"] == "bound_exhausted" else "evaluate",
+            self._route_generation,
             {
                 "skip_to_end": END,
+                "retry": "generate",
                 "evaluate": "evaluate",
             },
         )
@@ -102,7 +114,6 @@ class CorrectiveLoop:
             "generation_inputs": inputs.model_dump(),
             "bound": self._bound,
             "attempt": 0,
-            "transient_retries": 0,
             "generation": None,
             "evaluation": None,
             "status": "rejected",
@@ -122,11 +133,10 @@ class CorrectiveLoop:
         )
         if not outcome.approved:
             report_error(
-                "content.bound_exhausted"
-                if outcome.status == "bound_exhausted"
-                else "content.rejected",
+                failure_event(outcome.status),
                 "corrective loop ended without approval",
                 attempt_number=outcome.attempt_number,
+                status=outcome.status,
             )
         return outcome
 
@@ -141,39 +151,68 @@ class CorrectiveLoop:
         if attempt > 1 and state.get("evaluation") is not None:
             # Corrective revision: the evaluator's rationale is appended as
             # input (non-shared prompts are preserved — constitution II).
+            # The revision number counts EVALUATIONS, not attempts: a
+            # transient failure consumes an attempt of the bound but
+            # produces no evaluation, so the rationale appended here is
+            # always the one of the previous evaluation.
+            revision = len(state.get("evaluations") or []) + 1
             instruction = (
-                f"{instruction}\nCorrective revision {attempt}: "
+                f"{instruction}\nCorrective revision {revision}: "
                 f"{state['evaluation'].rationale}"
             )
-        retries = state["transient_retries"]
-        while True:
-            try:
-                generated = await self._generator.generate(instruction, inputs)
-                break
-            except TransientAIError as exc:
-                retries += 1
-                if retries > self._bound:
-                    logger.error(
-                        "transient provider failure beyond bound | retries=%d",
-                        retries,
-                    )
-                    return {
-                        "attempt": attempt,
-                        "transient_retries": retries,
-                        "attempts": [*state["attempts"]],
-                        "status": "bound_exhausted",
-                    }
-                report_info(
-                    "content.transient_failure",
-                    "absorbing transient provider failure",
-                    retries=retries,
-                    error=str(exc)[:200],
+        try:
+            generated = await self._generator.generate(instruction, inputs)
+        except NonTransientAIError as exc:
+            # A permanent provider failure (unknown model, invalid
+            # request, unauthorized) is not worth retrying: the loop ends
+            # at once and the service reports it as unavailable.
+            logger.error(
+                "permanent provider failure | attempt=%d error=%s",
+                attempt,
+                str(exc)[:200],
+            )
+            return {
+                "attempt": attempt,
+                "generation": None,
+                "attempts": [*state["attempts"]],
+                "status": "provider_failed",
+            }
+        except TransientAIError as exc:
+            # A transient failure consumes ONE attempt of the same bound
+            # (A-17: no separate transient-failure counter is maintained),
+            # so the provider is called at most `bound` times in total.
+            if attempt >= self._bound:
+                logger.error(
+                    "transient provider failure beyond bound | attempt=%d bound=%d",
+                    attempt,
+                    self._bound,
                 )
+                return {
+                    "attempt": attempt,
+                    "attempts": [*state["attempts"]],
+                    "status": "bound_exhausted",
+                }
+            report_info(
+                "content.transient_failure",
+                "absorbing transient provider failure",
+                attempt=attempt,
+                bound=self._bound,
+                error=str(exc)[:200],
+            )
+            # Retry the generation: the attempt counter already accounts
+            # for the consumed budget, so the next node re-enters with an
+            # incremented attempt. The generation is cleared so the router
+            # retries instead of re-evaluating a previous attempt.
+            return {
+                "attempt": attempt,
+                "generation": None,
+                "attempts": [*state["attempts"]],
+                "status": "rejected",
+            }
         attempts = [*state["attempts"], generated]
         return {
             "attempt": attempt,
             "generation": generated,
-            "transient_retries": retries,
             "attempts": attempts,
         }
 
@@ -196,3 +235,16 @@ class CorrectiveLoop:
         if state["attempt"] >= state["bound"]:
             return "bound_exhausted"
         return "revise"
+
+    def _route_generation(self, state: LoopState) -> str:
+        """Where to go after the generation node.
+
+        A transient failure leaves the state without a generation: the loop
+        retries the generation (the attempt counter already consumed one
+        unit of the bound). A permanent provider failure ends the loop.
+        """
+        if state["status"] in ("bound_exhausted", "provider_failed"):
+            return "skip_to_end"
+        if state.get("generation") is None:
+            return "retry"
+        return "evaluate"

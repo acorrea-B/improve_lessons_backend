@@ -19,6 +19,7 @@ from app.adapters.external.ai.deterministic_ai import (
     DeterministicEmbeddingProvider,
 )
 from app.adapters.external.ai.local_vector_search import LocalVectorSearch
+from app.adapters.external.notifications.local_mail_bridge import LocalMailBridge
 from app.adapters.external.notifications.localstack_email_sender import (
     InMemoryEmailSender,
 )
@@ -105,16 +106,32 @@ class Container:
         # Email delivery by the environment: development goes through the
         # LocalStack-parameterized SES client, non-development/test (real
         # AWS) through the basic IAM-resolved client; the unit-test
-        # environment keeps the in-memory fake (no network).
+        # environment keeps the in-memory fake (no network). In development,
+        # when SMTP_HOST is configured, the SES sender is decorated with a
+        # bridge that forwards the same message to a real SMTP server so
+        # reminders land in an actual mailbox (compose passes SMTP_HOST
+        # through; empty = bridge disabled, identical behavior).
         if settings.app_env == "test":
             self.email_sender: InMemoryEmailSender | Boto3SESEmailSender = (
                 InMemoryEmailSender()
             )
         else:
-            self.email_sender = Boto3SESEmailSender(
+            ses_sender = Boto3SESEmailSender(
                 sender_address=settings.ses_sender_email,
                 region_name=settings.aws_region,
                 aws_settings=aws_client_credentials(settings.app_env),
+            )
+            self.email_sender = (
+                LocalMailBridge(
+                    ses_sender,
+                    smtp_host=settings.smtp_host,
+                    smtp_port=settings.smtp_port,
+                    smtp_user=settings.smtp_user,
+                    smtp_password=settings.smtp_password,
+                    sender_address=settings.ses_sender_email,
+                )
+                if settings.app_env == "development" and settings.smtp_host
+                else ses_sender
             )
 
         # Repositories (persistence adapters)
@@ -142,9 +159,20 @@ class Container:
         self.status_strategy = SubmissionStatusStrategy()
         self.recommendation_strategy = RecommendationStrategy()
 
-        # AI adapters
-        self.generator = DeterministicContentGenerator()
-        self.evaluator = DeterministicContentEvaluator()  # separate rubric model
+        # AI adapters. The generation and the evaluation models are always
+        # wired as a PAIR: mixing a real generator with the deterministic
+        # rubric would be wrong (the stub rejects on literal words, so real
+        # material would never pass). The unit-test environment always
+        # uses the deterministic pair, so the suite never touches the
+        # network.
+        #
+        # The pair is wrapped in swappable delegates: the services hold
+        # the port, not the concrete adapter, so the development fallback
+        # (an unreachable provider → the deterministic pair takes over) can
+        # swap the delegate without rebuilding the service graph.
+        generator, evaluator = _build_ai_pair(settings)
+        self.generator = _SwappableGenerator(generator)
+        self.evaluator = _SwappableEvaluator(evaluator)
         self.embeddings = DeterministicEmbeddingProvider()
         self.vector_search = LocalVectorSearch(self.chunks_repo)
         self.rag = RAGService(self.embeddings, self.vector_search)
@@ -266,17 +294,67 @@ class Container:
             await _signing_key(self.secret_provider),
             token_ttl_seconds=self.settings.auth_token_ttl_seconds,
         )
-        if isinstance(self.email_sender, Boto3SESEmailSender):
+        ses_sender = (
+            self.email_sender.inner
+            if isinstance(self.email_sender, LocalMailBridge)
+            else self.email_sender
+        )
+        if isinstance(ses_sender, Boto3SESEmailSender):
             # Production: a client that cannot be built fails startup (fail
             # fast). Locally: contained, the sender rebuilds the client and
             # retries on the first deliverable email.
             try:
-                await self.email_sender.prime()
+                await ses_sender.prime()
             except Exception as exc:
                 if self.settings.app_env not in ("development", "test"):
                     raise
                 logger.error("ses email sender priming failed | error=%s", exc)
+        await self._prime_ai_provider()
         self.reminder_worker.start()
+
+    async def _prime_ai_provider(self) -> None:
+        """Check the AI provider is reachable before serving traffic.
+
+        Production: an unreachable provider fails startup (fail fast —
+        the content workflow could never approve material). Development:
+        contained, the deterministic pair takes over so the app still
+        runs locally (same policy as the SES priming above).
+        """
+        if self.settings.app_env == "test" or self.settings.ai_provider == "deterministic":
+            return
+        from app.adapters.external.ai.ollama_client import OllamaChatRequest, OllamaClient
+
+        try:
+            client = OllamaClient(
+                self.settings.ai_base_url,
+                timeout_seconds=self.settings.ai_request_timeout_seconds,
+            )
+            await client.chat(
+                OllamaChatRequest(
+                    model=self.settings.ai_generation_model,
+                    messages=[
+                        {"role": "user", "content": "Reply with the single word: ready."}
+                    ],
+                    num_predict=16,
+                    keep_alive=self.settings.ai_keep_alive,
+                )
+            )
+        except Exception as exc:
+            if self.settings.app_env not in ("development", "test"):
+                raise
+            logger.error("ai provider priming failed | error=%s", exc)
+            # Contained locally: the deterministic pair takes over. The
+            # delegates are swapped, so every service that already holds
+            # the port sees the new adapter.
+            self.generator.swap(DeterministicContentGenerator())
+            self.evaluator.swap(DeterministicContentEvaluator())
+            return
+        logger.info(
+            "ai provider ready | base_url=%s generation=%s evaluation=%s",
+            self.settings.ai_base_url,
+            self.settings.ai_generation_model,
+            self.settings.ai_evaluation_model,
+        )
 
     async def stop(self) -> None:
         """Graceful shutdown (T116): flush pending reminder dispatches,
@@ -316,6 +394,87 @@ async def _signing_key(secret_provider) -> str:
     except Exception:
         # LocalStack not reachable: fall back to a development-only key.
         return "local-development-signing-key"
+
+
+class _SwappableGenerator:
+    """A ``ContentGenerator`` that delegates to a swappable adapter.
+
+    The services hold this delegate, not the concrete adapter, so the
+    development fallback (an unreachable provider) can swap the
+    underlying adapter without rebuilding the service graph.
+    """
+
+    def __init__(self, adapter) -> None:
+        self._adapter = adapter
+
+    @property
+    def model_id(self) -> str:
+        return self._adapter.model_id
+
+    def swap(self, adapter) -> None:
+        self._adapter = adapter
+
+    async def generate(self, instruction, inputs):
+        return await self._adapter.generate(instruction, inputs)
+
+
+class _SwappableEvaluator:
+    """A ``ContentEvaluator`` that delegates to a swappable adapter."""
+
+    def __init__(self, adapter) -> None:
+        self._adapter = adapter
+
+    @property
+    def model_id(self) -> str:
+        return self._adapter.model_id
+
+    def swap(self, adapter) -> None:
+        self._adapter = adapter
+
+    async def evaluate(self, generated, cefr_level, purpose):
+        return await self._adapter.evaluate(generated, cefr_level, purpose)
+
+
+def _build_ai_pair(settings: Settings):
+    """Build the (generator, evaluator) pair for the configured provider.
+
+    The pair is selected together, never one adapter at a time
+    (constitution principle II: two distinct models, two distinct roles).
+
+    - the test environment always gets the deterministic pair: the suite
+      must not touch the network;
+    - ``AI_PROVIDER=deterministic`` forces the deterministic pair;
+    - otherwise the Ollama pair is used. Ollama does not authenticate, so
+      there is no secret to resolve.
+    """
+    if settings.app_env == "test" or settings.ai_provider == "deterministic":
+        return DeterministicContentGenerator(), DeterministicContentEvaluator()
+    from app.adapters.external.ai.ollama_client import OllamaClient
+    from app.adapters.external.ai.ollama_evaluator import OllamaContentEvaluator
+    from app.adapters.external.ai.ollama_generator import OllamaContentGenerator
+
+    def client() -> OllamaClient:
+        return OllamaClient(
+            settings.ai_base_url,
+            timeout_seconds=settings.ai_request_timeout_seconds,
+        )
+
+    # Two independent clients: no shared internal state between the roles
+    # (constitution principle II).
+    return (
+        OllamaContentGenerator(
+            client(),
+            model=settings.ai_generation_model,
+            max_tokens=settings.ai_generation_max_tokens,
+            keep_alive=settings.ai_keep_alive,
+        ),
+        OllamaContentEvaluator(
+            client(),
+            model=settings.ai_evaluation_model,
+            max_tokens=settings.ai_evaluation_max_tokens,
+            keep_alive=settings.ai_keep_alive,
+        ),
+    )
 
 
 async def _seed_feature_availability(repository) -> None:

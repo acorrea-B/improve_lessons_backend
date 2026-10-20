@@ -181,6 +181,92 @@ The list MUST include every secret required by the application
 configuration. `scripts/init-localstack.sh` is the single source of
 truth for the secret names; running it twice is safe.
 
+## 6b. Receiving REAL emails locally (SES → SMTP bridge)
+
+LocalStack community SES accepts `SendEmail` but never delivers to a real
+mailbox. In development, when `SMTP_HOST` is configured, the backend
+decorates the SES sender with a bridge that forwards the same message to a
+real SMTP server (internal postfix/mailutils, etc.) — so reminder emails
+produced by local functional tests land in an actual inbox. `SMTP_HOST=""
+`` (the default) disables the bridge and keeps behavior identical.
+
+```bash
+# Point the backend at an SMTP target (example: a debug receiver on the host)
+SMTP_HOST=host.docker.internal SMTP_PORT=1025 docker compose up -d --build backend
+
+# Or forward to a remote postfix instance
+SMTP_HOST=<your-smtp-server> SMTP_PORT=25 docker compose up -d backend
+```
+
+- Both channels run independently with contained failures: the SES leg
+  (LocalStack `SendEmail`, visible via `MessageId` in the logs) is always
+  attempted, then the real SMTP forward; neither failure blocks the other.
+- `SMTP_USER`/`SMTP_PASSWORD` enable STARTTLS + login for SMTP servers
+  that require auth; an internal postfix usually needs none.
+- Success lines in the backend logs: `email delivered | to=... message_id=...`
+  (SES channel) and `email delivered | to=... channel=smtp` (real forward).
+- A throwaway debug receiver for quick verification (tool, not a project
+  dependency): `uvx aiosmtpd -n -l 0.0.0.0:1025`.
+
+## 6c. Running the REAL AI models (Ollama)
+
+The content workflow runs TWO different models: `minimax-m3.1-flash:cloud`
+generates the material and `glm-5.3-flash:cloud` evaluates it against the
+six CEFR criteria. Both are served by Ollama through its native API
+(`POST /api/chat`); both are `:cloud` models, so Ollama proxies them to
+the provider's cloud and they do not consume the host's hardware.
+
+```bash
+# Option A (recommended): Ollama as a Compose service
+docker compose --profile ai up -d ollama
+docker exec -it improve_lessons_backend-ollama-1 ollama pull minimax-m3.1-flash:cloud
+docker exec -it improve_lessons_backend-ollama-1 ollama pull glm-5.3-flash:cloud
+AI_BASE_URL=http://ollama:11434 docker compose up -d --build backend
+
+# Option B: the host's Ollama (must listen on more than 127.0.0.1)
+ollama pull minimax-m3.1-flash:cloud
+ollama pull glm-5.3-flash:cloud
+docker compose up -d --build backend
+```
+
+**The host's Ollama must accept connections from the container.** By
+default `ollama serve` listens on `127.0.0.1` only, which the container
+cannot reach — the priming then logs
+`ai provider priming failed | error=... Connection refused` and the
+backend falls back to the deterministic pair. Either use the Compose
+`ollama` service (option A, reached by service name on the Compose
+network) or let the host's Ollama listen on the bridge interface
+(`OLLAMA_HOST=0.0.0.0:11434 ollama serve`). The latter exposes the model
+server on every host interface, so do it only on a machine whose network
+you trust.
+
+Configuration (all optional — the defaults match the values above):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_PROVIDER` | `ollama` | `deterministic` forces the offline stub pair |
+| `AI_BASE_URL` | `http://host.docker.internal:11434` | the Ollama server (`http://ollama:11434` with the Compose service) |
+| `AI_GENERATION_MODEL` | `minimax-m3.1-flash:cloud` | the generation model |
+| `AI_EVALUATION_MODEL` | `glm-5.3-flash:cloud` | the evaluation model |
+| `AI_GENERATION_MAX_TOKENS` | `8000` | generation token budget |
+| `AI_EVALUATION_MAX_TOKENS` | `6000` | evaluation token budget |
+| `AI_REQUEST_TIMEOUT_SECONDS` | `180` | per-request timeout |
+| `AI_KEEP_ALIVE` | `10m` | how long Ollama keeps the model loaded |
+
+- In a real environment, `AI_BASE_URL` is the provider's network
+  hostname — never `127.0.0.1`, which inside a container is the container
+  itself.
+- Ollama does not authenticate, so no secret is resolved for it.
+- At startup the backend primes the provider: outside development/test an
+  unreachable provider fails startup (fail fast); in development the
+  failure is logged and the deterministic pair takes over.
+- The two models have separate roles, separate system prompts and
+  separate clients (constitution principle II). The evaluator's verdict
+  is fail-closed: a material is approved only when all six criteria are
+  present and passing.
+- The test suite never touches the provider: the provider exchanges are
+  replayed from VCR cassettes under `tests/vcr_cassettes/`.
+
 ## 7. Resetting the environment
 
 ```bash

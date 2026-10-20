@@ -27,6 +27,32 @@ services:
       timeout: 5s
       retries: 30
 
+  # AI provider (US-12, T119). Ollama serves the two models of the
+  # content workflow: `minimax-m3.1-flash:cloud` generates and
+  # `glm-5.3-flash:cloud` evaluates. Both are `:cloud` models, so Ollama
+  # proxies them to the provider's cloud.
+  #
+  # It is a Compose service (not the host's Ollama) so the backend
+  # reaches it by service name on the Compose network — the container
+  # cannot see the host's 127.0.0.1, and a host Ollama that listens
+  # only on 127.0.0.1 is unreachable from here.
+  #
+  # Start it with:  docker compose --profile ai up -d ollama
+  # and point the backend at it:
+  #   AI_BASE_URL=http://ollama:11434 docker compose up -d backend
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
   backend:
     build:
       context: .
@@ -39,9 +65,32 @@ services:
       - SECRETS_ENDPOINT_URL=http://localstack:4566
       - AWS_ENDPOINT_URL=http://localstack:4566
       - AWS_REGION=us-east-1
-      - SES_SENDER_EMAIL=no-reply@local.test
+      - SES_SENDER_EMAIL=${SES_SENDER_EMAIL:-no-reply@local.test}
+      # Real-email bridge (development only): set SMTP_HOST on the host
+      # (e.g. `SMTP_HOST=host.docker.internal SMTP_PORT=1025 docker compose
+      # up -d backend`) to forward SES emails to a real SMTP server;
+      # empty = bridge disabled, unchanged behavior.
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-25}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      # AI provider (US-12): the default points at the host's Ollama
+      # through host.docker.internal (extra_hosts below), which requires
+      # that Ollama to listen on more than 127.0.0.1. The Compose
+      # `ollama` service of this file is the alternative:
+      #   AI_BASE_URL=http://ollama:11434
+      # In any other environment, set the provider's network hostname.
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - AI_BASE_URL=${AI_BASE_URL:-http://host.docker.internal:11434}
+      - AI_GENERATION_MODEL=${AI_GENERATION_MODEL:-minimax-m3.1-flash:cloud}
+      - AI_EVALUATION_MODEL=${AI_EVALUATION_MODEL:-glm-5.3-flash:cloud}
     ports:
       - "8000:8000"
+    # host-gateway makes host.docker.internal resolve to the machine running
+    # docker (required for SMTP_HOST=host.docker.internal bridge setups and
+    # any other host-local service on Linux).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -63,3 +112,4 @@ services:
 volumes:
   mongodb_data:
   localstack_data:
+  ollama_models:

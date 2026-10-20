@@ -1,0 +1,305 @@
+interactions:
+- request:
+    body: "{\"model\":\"glm-5.3-flash:cloud\",\"messages\":[{\"role\":\"system\",\"content\":\"You
+      are a strict CEFR examiner assessing English-learning material produced by another
+      teacher. You are an examiner, not an editor.\\n\\nYou assess the material against
+      exactly these six criteria:\\n1. vocabulary \u2014 the lexis matches the target
+      CEFR level: it uses what that level owns and does not stay below it. A1-A2 lexis
+      for a B1 learner fails this criterion.\\n2. grammar \u2014 the grammar is correct
+      and at the target level.\\n3. sentence_length \u2014 the sentences are of a
+      length a learner at that level can read.\\n4. reading_demands \u2014 the reading
+      passage asks what a learner at that level can do.\\n5. writing_demands \u2014
+      the writing exercises ask what a learner at that level can do.\\n6. relevance
+      \u2014 the material is grounded in the learner's documented history and matches
+      the requested purpose and level.\\n\\nEXPECTED LENGTH BY LEVEL (the passage
+      should be roughly this long):\\nA1 60-100 words, A2 90-140, B1 140-200, B2 180-240,
+      C1 200-280, C2 200-280.\\n\\nRULES:\\n- Judge only the material in front of
+      you. You never rewrite it, never repair it and never continue it: the teacher
+      who wrote it does the correcting.\\n- Approve only when all six criteria pass.
+      If any single criterion fails, the verdict is \\\"rejected\\\".\\n- Give a short,
+      specific rationale naming the failing criteria.\\n- If the material is not English-learning
+      material at all (for example code, arithmetic, programming instructions or any
+      other kind of problem-solving), reject it: the criterion \\\"relevance\\\" fails.\\n-
+      Answer with a single JSON object and nothing else. No markdown, no code fence,
+      no commentary before or after it. The JSON object must have exactly this shape,
+      with one entry for each of the six criteria:\\n\\nSCHEMA\\n{\\n  \\\"verdict\\\":
+      \\\"approved | rejected\\\",\\n  \\\"rationale\\\": \\\"<one short paragraph
+      explaining the verdict>\\\",\\n  \\\"criteria\\\": [\\n    {\\\"criterion\\\":
+      \\\"vocabulary\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n
+      \   {\\\"criterion\\\": \\\"grammar\\\", \\\"passed\\\": true, \\\"comment\\\":
+      \\\"<short comment>\\\"},\\n    {\\\"criterion\\\": \\\"sentence_length\\\",
+      \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n    {\\\"criterion\\\":
+      \\\"reading_demands\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n
+      \   {\\\"criterion\\\": \\\"writing_demands\\\", \\\"passed\\\": true, \\\"comment\\\":
+      \\\"<short comment>\\\"},\\n    {\\\"criterion\\\": \\\"relevance\\\", \\\"passed\\\":
+      true, \\\"comment\\\": \\\"<short comment>\\\"}\\n  ]\\n}\"},{\"role\":\"user\",\"content\":\"Target
+      CEFR level: B1\\nRequested purpose: daily practice\\n\\nMaterial to assess:\\n{\\n
+      \ \\\"reading\\\": {\\n    \\\"title\\\": \\\"Writing a Python Function\\\",\\n
+      \   \\\"body\\\": \\\"To add two numbers in Python, you write a function. Use
+      the def keyword followed by the name and the parameters in parentheses. Then
+      indent the body and call the return statement. For example, def add(a, b): return
+      a + b. You can also compute the factorial of a number with a loop that multiplies
+      the result by each value from one up to n.\\\",\\n    \\\"vocabulary\\\": [\\n
+      \     \\\"function\\\",\\n      \\\"parameter\\\",\\n      \\\"indentation\\\",\\n
+      \     \\\"loop\\\"\\n    ]\\n  },\\n  \\\"writing_exercises\\\": [\\n    {\\n
+      \     \\\"prompt\\\": \\\"Write a Python function that reverses a string and
+      test it.\\\"\\n    },\\n    {\\n      \\\"prompt\\\": \\\"Compute 17 * 23 and
+      explain the result step by step.\\\"\\n    }\\n  ]\\n}\\n\\nAssess the six criteria
+      and answer with the JSON object now.\"}],\"stream\":false,\"format\":\"json\",\"keep_alive\":\"10m\",\"options\":{\"num_predict\":6000,\"temperature\":0.0}}"
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3512'
+      Content-Type:
+      - application/json;charset=utf-8
+      User-Agent:
+      - niquests/3.21.2
+    method: POST
+    uri: http://127.0.0.1:11434/api/chat
+  response:
+    body:
+      string: "{\"model\":\"glm-5.3-flash\",\"created_at\":\"2026-10-20T21:27:33.380327027Z\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\n
+        \ \\\"verdict\\\": \\\"rejected\\\",\\n  \\\"rationale\\\": \\\"The material
+        is a programming tutorial plus an arithmetic task, not English-learning material,
+        so relevance fails outright. The lexis is technical jargon (def, parameter,
+        indentation, factorial) rather than B1 general English, with the surrounding
+        language staying at A2, so vocabulary also fails. The passage teaches coding
+        instead of asking for B1-level English reading (and at roughly 70 words it
+        is far below the expected 140-200 for B1), and both writing prompts request
+        code and multiplication rather than English composition, so reading_demands
+        and writing_demands fail as well. Grammar is correct and sentences are short,
+        but the verdict is rejected.\\\",\\n  \\\"criteria\\\": [\\n    {\\\"criterion\\\":
+        \\\"vocabulary\\\", \\\"passed\\\": false, \\\"comment\\\": \\\"Technical
+        jargon (def, parameter, indentation, factorial) instead of B1 general lexis;
+        the rest of the language stays at A2.\\\"},\\n    {\\\"criterion\\\": \\\"grammar\\\",
+        \\\"passed\\\": true, \\\"comment\\\": \\\"English grammar is correct, though
+        limited to simple imperatives and present simple.\\\"},\\n    {\\\"criterion\\\":
+        \\\"sentence_length\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"Sentences
+        are short and easily readable at B1.\\\"},\\n    {\\\"criterion\\\": \\\"reading_demands\\\",
+        \\\"passed\\\": false, \\\"comment\\\": \\\"The passage is a coding how-to
+        demanding programming comprehension, not B1 English reading; it is also far
+        below the expected 140-200 words.\\\"},\\n    {\\\"criterion\\\": \\\"writing_demands\\\",
+        \\\"passed\\\": false, \\\"comment\\\": \\\"Prompts ask learners to write
+        Python code and compute 17 * 23, not to produce English writing at B1.\\\"},\\n
+        \   {\\\"criterion\\\": \\\"relevance\\\", \\\"passed\\\": false, \\\"comment\\\":
+        \\\"Programming instructions and arithmetic are not English-learning material
+        and do not serve daily English practice.\\\"}\\n  ]\\n}\",\"thinking\":\"Let
+        me assess this material against the six criteria.\\n\\nTarget CEFR level:
+        B1\\nRequested purpose: daily practice\\n\\nThe material is about writing
+        Python functions \u2014 this is programming instruction, not English-learning
+        material. The system prompt explicitly says: \\\"If the material is not English-learning
+        material at all (for example code, arithmetic, programming instructions or
+        any other kind of problem-solving), reject it: the criterion 'relevance' fails.\\\"\\n\\nSo
+        relevance fails clearly. The material is programming instructions and arithmetic
+        (17 * 23), not English learning.\\n\\nLet me also check the other criteria:\\n\\n1.
+        vocabulary \u2014 The vocabulary list includes \\\"function\\\", \\\"parameter\\\",
+        \\\"indentation\\\", \\\"loop\\\". These are technical/programming terms,
+        not B1 English vocabulary in the general sense. The passage itself is technical
+        jargon. For a B1 learner, the lexis should be B1-level general English. The
+        material uses technical terms that aren't really about English learning. However,
+        the vocabulary itself \u2014 \\\"function\\\", \\\"parameter\\\", \\\"indentation\\\",
+        \\\"loop\\\" \u2014 some of these are arguably B1+ words. But the criterion
+        says \\\"the lexis matches the target CEFR level: it uses what that level
+        owns and does not stay below it.\\\" The passage is mostly simple A2-level
+        syntax with technical jargon. Hmm. I could argue vocabulary fails because
+        it's technical jargon rather than B1 general English, or passes because the
+        words are at/above B1. The main failure is relevance. But I should judge each
+        criterion honestly.\\n\\nActually, let me think. The vocabulary in the passage:
+        \\\"add two numbers\\\", \\\"write a function\\\", \\\"keyword\\\", \\\"parameters\\\",
+        \\\"parentheses\\\", \\\"indent\\\", \\\"body\\\", \\\"return statement\\\",
+        \\\"compute\\\", \\\"factorial\\\", \\\"loop\\\", \\\"multiplies\\\", \\\"result\\\",
+        \\\"value\\\". Words like \\\"factorial\\\", \\\"parameter\\\", \\\"parentheses\\\",
+        \\\"keyword\\\" are technical. \\\"Factorial\\\" is not B1 vocabulary \u2014
+        it's specialized math/programming terminology. The passage doesn't really
+        use B1 general English lexis; it's either simple A2 connectors or technical
+        jargon. I could mark vocabulary as failed because the lexis is technical jargon
+        (factorial, parameter, indentation) rather than B1 general English, and much
+        of the surrounding language stays at A2. But the primary, unambiguous failure
+        is relevance.\\n\\n2. grammar \u2014 The grammar is mostly correct and simple.
+        \\\"Use the def keyword followed by the name and the parameters in parentheses.\\\"
+        Imperative. \\\"Then indent the body and call the return statement.\\\" Fine.
+        \\\"For example, def add(a, b): return a + b.\\\" \u2014 this is code, not
+        English. Grammar of the English is simple but correct. I'd say grammar passes
+        (it's correct, though simple \u2014 but the criterion says \\\"correct and
+        at the target level\\\"; the grammar is below B1 level, mostly imperatives
+        and simple present). Hmm, \\\"at the target level\\\" \u2014 the grammar is
+        A2-level imperatives. But since the material isn't English learning material
+        at all, the main verdict is rejected via relevance. I could still note grammar
+        is simple but correct. I'll pass grammar with a comment that it's correct
+        but simple, or fail it? Let me be careful: the instructions say approve only
+        when all six pass. Since relevance fails, verdict is rejected regardless.
+        For the other criteria, I should give honest assessments.\\n\\n3. sentence_length
+        \u2014 Sentences are short, readable at B1. Pass.\\n\\n4. reading_demands
+        \u2014 The reading passage asks the learner to understand programming instructions,
+        not to practice English reading comprehension at B1. It doesn't ask what a
+        B1 English learner can do; it's a coding tutorial. I'd say reading_demands
+        fails or is at least questionable. The criterion: \\\"the reading passage
+        asks what a learner at that level can do.\\\" The passage is a programming
+        how-to; it doesn't constitute an English reading task. I could fail it: the
+        passage is a coding tutorial, not an English reading task for B1. Alternatively
+        pass because a B1 learner could read it. I think failing reading_demands is
+        defensible: the demands are programming comprehension, not English reading
+        comprehension. But the criterion is about whether the reading demands match
+        the level. The text is readable at B1 but it's not an English-learning reading
+        task. Hmm. I'll consider: the reading demands are about following code instructions
+        \u2014 that's not an English reading demand. I'll mark it failed with a comment,
+        or pass with a note. Given the material is entirely off-purpose, I think the
+        cleanest assessment: relevance fails decisively; vocabulary arguably fails
+        (technical jargon, not B1 general lexis); reading_demands fails (it's a coding
+        tutorial, not an English reading task); writing_demands fail (write a Python
+        function; compute arithmetic \u2014 these are programming/math tasks, not
+        English writing tasks). Grammar and sentence_length pass on their face.\\n\\nActually
+        for writing_demands: \\\"Write a Python function that reverses a string and
+        test it\\\" \u2014 that's a coding task, not English writing. \\\"Compute
+        17 * 23 and explain the result step by step\\\" \u2014 arithmetic plus explanation.
+        Neither asks for English writing at B1. So writing_demands fails.\\n\\nReading_demands:
+        the passage is a coding tutorial; there's no English reading task. I'll fail
+        it too, or pass? The criterion says \\\"the reading passage asks what a learner
+        at that level can do.\\\" The passage doesn't ask anything \u2014 it's instructions.
+        There's no comprehension task. I'll fail reading_demands with comment that
+        it's a programming tutorial with no English reading task.\\n\\nVocabulary:
+        technical jargon (def, parameter, indentation, factorial) is not B1 general
+        English lexis; the rest stays at A2. I'll fail vocabulary too? Hmm, I want
+        to be careful not to over-fail. The core failure is relevance. But being a
+        strict examiner, I think vocabulary fails because the lexis is domain-specific
+        programming/math terminology rather than B1 general English. Actually, one
+        could argue that B1 learners can learn technical vocabulary. But the criterion
+        is about matching the target level's lexis. \\\"Factorial\\\" is C1+ technical.
+        \\\"Parameter\\\", \\\"indentation\\\" are technical. The passage's general
+        language is A2 (\\\"add two numbers\\\", \\\"write a function\\\", \\\"You
+        can also...\\\"). So vocabulary fails: it doesn't use B1 general lexis; it's
+        either below (A2 syntax) or technical jargon.\\n\\nGrammar: The English grammar
+        is correct but simple (imperatives, simple present, modal \\\"can\\\"). Is
+        it \\\"at the target level\\\"? B1 grammar would include conditionals, present
+        perfect, relative clauses, etc. The grammar here is A2. Strictly, grammar
+        fails \\\"at the target level\\\" too. But I don't want to pile on excessively.
+        Hmm. The instruction: \\\"grammar \u2014 the grammar is correct and at the
+        target level.\\\" The grammar is correct but below B1. Strictly that fails.
+        But since the material is code instructions, grammar assessment is a bit moot.
+        I could pass grammar with a comment \\\"correct but simple; below B1 complexity\\\"
+        \u2014 but if I say below B1, then it should fail. Let me decide: I'll mark
+        grammar as passed with a note that it's correct though simple, or failed?
+        Being strict: the criterion requires grammar at target level. Imperatives
+        and simple present are A2. I'll fail it? Hmm.\\n\\nActually, let me reconsider.
+        The primary and decisive failure is relevance \u2014 the material is programming/arithmetic
+        instruction, not English-learning material. The system prompt says to reject
+        in that case. For the other criteria, I should give honest short assessments.
+        I think the most defensible set:\\n\\n- vocabulary: failed \u2014 technical
+        jargon (def, parameter, indentation, factorial) instead of B1 general lexis;
+        surrounding language stays at A2.\\n- grammar: passed \u2014 English grammar
+        is correct, though simple (but I could note it's below B1). Hmm, if I note
+        it's below B1, passing seems inconsistent. Alternatively: passed with comment
+        \\\"correct; simple structures\\\" \u2014 the criterion is \\\"correct and
+        at the target level\\\". Simple imperatives are within what a B1 learner can
+        read, but the material doesn't showcase B1 grammar. I think for a strict examiner,
+        grammar at A2 level for a B1 target fails. But the parallel with vocabulary:
+        \\\"A1-A2 lexis for a B1 learner fails this criterion\\\" \u2014 explicitly
+        stated for vocabulary. For grammar, no such explicit statement, but \\\"at
+        the target level\\\" implies similar. I'll fail grammar too? That might be
+        over-failing. Let me think about what's most useful: the verdict is rejected
+        either way. The rationale should name the failing criteria. I think the cleanest,
+        most honest assessment:\\n\\n- vocabulary: fail (technical jargon, not B1
+        general English; rest is A2)\\n- grammar: pass (correct, though simple) \u2014
+        or fail? I'll pass it with a comment noting it's correct but simple. Actually
+        the criterion says \\\"correct and at the target level\\\". If grammar is
+        A2-level for a B1 target, it fails. But the sentences are instructional imperatives;
+        a B1 learner handles them fine. The \\\"at the target level\\\" for grammar
+        in reading material usually means the grammar shouldn't be above the level
+        (too hard) \u2014 material below level is a vocabulary/engagement issue. Hmm,
+        the vocabulary criterion explicitly says staying below fails. For grammar,
+        ambiguous. I'll pass grammar with comment \\\"correct; simple imperative structures
+        a B1 learner can handle, though below B1 complexity.\\\" Hmm, that comment
+        itself suggests it's borderline. Alternatively fail it. Let me decide: pass
+        grammar, since the grammar is correct and not beyond B1; the main deficiency
+        is captured in vocabulary and relevance.\\n\\nActually wait \u2014 being a
+        \\\"strict CEFR examiner\\\", I think failing grammar for being below target
+        is consistent with failing vocabulary for being below target. But the explicit
+        rule only mentions lexis. I'll go with pass for grammar but note simplicity.
+        Hmm, but then the rationale names failing criteria: relevance, vocabulary,
+        reading_demands, writing_demands. That's a lot but justified.\\n\\n- sentence_length:
+        pass \u2014 short, clear sentences within B1 reading comfort.\\n- reading_demands:
+        fail \u2014 the passage is a programming tutorial; it demands coding comprehension,
+        not B1 English reading skills; no English reading task.\\n- writing_demands:
+        fail \u2014 prompts ask to write code and do arithmetic, not English writing
+        at B1.\\n- relevance: fail \u2014 programming instructions and arithmetic,
+        not English-learning material; no grounding in learner history or daily English
+        practice.\\n\\nVerdict: rejected.\\n\\nRationale: one short paragraph naming
+        failing criteria: relevance (programming/arithmetic content, not English learning),
+        vocabulary (technical jargon rather than B1 general lexis), reading_demands
+        and writing_demands (tasks are coding/math, not English skills).\\n\\nLet
+        me draft the JSON:\\n\\n{\\n  \\\"verdict\\\": \\\"rejected\\\",\\n  \\\"rationale\\\":
+        \\\"The material is a programming tutorial with an arithmetic task, not English-learning
+        material, so relevance fails outright. The lexis is technical jargon (def,
+        parameter, indentation, factorial) rather than B1 general English, with the
+        surrounding language staying at A2, so vocabulary also fails. The reading
+        passage teaches coding rather than asking for B1-level English reading, and
+        both writing prompts ask for code and multiplication, not English composition,
+        so reading_demands and writing_demands fail. Grammar is correct and sentences
+        are short, but the verdict is rejected.\\\",\\n  \\\"criteria\\\": [\\n    {\\\"criterion\\\":
+        \\\"vocabulary\\\", \\\"passed\\\": false, \\\"comment\\\": \\\"Technical
+        jargon (def, parameter, indentation, factorial) instead of B1 general lexis;
+        the rest of the language stays at A2.\\\"},\\n    {\\\"criterion\\\": \\\"grammar\\\",
+        \\\"passed\\\": true, \\\"comment\\\": \\\"English grammar is correct, though
+        limited to simple imperatives and present simple.\\\"},\\n    {\\\"criterion\\\":
+        \\\"sentence_length\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"Sentences
+        are short and easily readable at B1.\\\"},\\n    {\\\"criterion\\\": \\\"reading_demands\\\",
+        \\\"passed\\\": false, \\\"comment\\\": \\\"The passage is a coding how-to;
+        it demands programming comprehension, not B1 English reading skills.\\\"},\\n
+        \   {\\\"criterion\\\": \\\"writing_demands\\\", \\\"passed\\\": false, \\\"comment\\\":
+        \\\"Prompts ask learners to write Python code and compute 17*23, not to produce
+        English writing at B1.\\\"},\\n    {\\\"criterion\\\": \\\"relevance\\\",
+        \\\"passed\\\": false, \\\"comment\\\": \\\"Programming instructions and arithmetic
+        are not English-learning material and do not serve daily English practice.\\\"}\\n
+        \ ]\\n}\\n\\nAlso check length: expected B1 passage 140-200 words. The body
+        is about 75 words \u2014 too short. Should I mention that? There's no explicit
+        length criterion among the six, but length could factor into reading_demands
+        or be noted. The expected length is given as guidance. The passage is ~75
+        words, well below the 140-200 for B1. I could mention this in reading_demands
+        or rationale. Hmm, the six criteria don't include length explicitly, but the
+        expected length is stated. I could note it in the reading_demands comment
+        or rationale. I'll add a brief note in the rationale or in reading_demands
+        comment: \\\"also far below the expected 140-200 words for B1.\\\" That strengthens
+        the reading_demands failure. Let me count the body words: \\\"To add two numbers
+        in Python, you write a function. Use the def keyword followed by the name
+        and the parameters in parentheses. Then indent the body and call the return
+        statement. For example, def add(a, b): return a + b. You can also compute
+        the factorial of a number with a loop that multiplies the result by each value
+        from one up to n.\\\" Roughly: sentence 1: 10 words; sentence 2: 14; sentence
+        3: 9; sentence 4: ~8; sentence 5: ~28. Total ~70 words. Yes, well below 140-200.\\n\\nI'll
+        mention it briefly in the rationale or reading_demands comment.\\n\\nFinal
+        JSON \u2014 must be a single JSON object, no markdown, no code fence. Output
+        only the JSON.\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":20553848000,\"prompt_eval_count\":769,\"prompt_eval_cached_count\":0,\"eval_count\":3368}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 20 Oct 2026 21:27:33 GMT
+      Server:
+      - Google Frontend
+      Traceparent:
+      - 00-aae77d648698550e32996e4843a3d721-d2ade37d2d971339-00
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      X-Build-Commit:
+      - 8b023f1dcd1aceee9db2ca40908f7e96ab2de35b
+      X-Build-Time:
+      - '2026-10-20T13:06:24-07:00'
+      X-Cloud-Trace-Context:
+      - aae77d648698550e32996e4843a3d721/15181040045711102777
+      X-Frame-Options:
+      - DENY
+      X-Request-Id:
+      - d824e107-57b7-4f92-846f-39858f20f7bc
+    status:
+      code: 200
+      message: OK
+version: 1

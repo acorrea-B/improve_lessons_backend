@@ -32,6 +32,27 @@ or, fully containerized (real MongoDB required for the integration tests):
 docker compose run --rm test
 ```
 
+## AI provider
+
+The content workflow runs **two different models**: `minimax-m3.1-flash:cloud`
+generates the material and `glm-5.3-flash:cloud` evaluates it against the
+six CEFR criteria. Both are served by Ollama through its native API, and
+both are `:cloud` models (Ollama proxies them to the provider's cloud).
+
+```bash
+ollama pull minimax-m3.1-flash:cloud
+ollama pull glm-5.3-flash:cloud
+docker compose up -d --build backend
+```
+
+The backend reaches the host's Ollama through `host.docker.internal`
+(the container cannot see the host's `127.0.0.1`); in another environment
+set `AI_BASE_URL` to the provider's network hostname. The model pair, the
+token budgets and the timeout are all configuration — see
+`specs/001-improve-lessons-backend/quickstart.md` § 6c. The test suite
+replays the provider exchanges from VCR cassettes, so it never touches
+the network.
+
 ## Runtime image assertion
 
 The `runtime` Docker target MUST NOT contain test code or

@@ -967,6 +967,64 @@ constitution.
   checks, the image content check, and the LocalStack secret
   tests. All must pass.
 
+## Phase 16b: Real AI Provider for the Two-Model Workflow (T119)
+
+**Goal**: replace the deterministic stub pair with two REAL models
+served by Ollama (native API `POST /api/chat`), keeping the two roles
+structurally independent and the approval gate intact.
+
+- [X] T119 [Story] Add the AI provider error hierarchy
+  (`app/core/ports/ai_errors.py`: `AIProviderError`,
+  `TransientAIError`, `NonTransientAIError`) and re-export
+  `TransientAIError` from the generator port so the existing
+  imports keep working.
+- [X] T120 [P] [Story] Add the Ollama client adapter
+  (`app/adapters/external/ai/ollama_client.py`): `POST /api/chat`
+  over `niquests` in synchronous mode inside `asyncio.to_thread`,
+  with the transient/permanent error mapping, the truncated-answer
+  refusal and the JSON extraction.
+- [X] T121 [P] [Story] Add the wire schemas
+  (`app/adapters/external/ai/ollama_schemas.py`): the material,
+  conversational and evaluation envelopes plus the schema snippets
+  embedded in each role's prompt.
+- [X] T122 [P] [Story] Add the generation adapter
+  (`app/adapters/external/ai/ollama_generator.py`): the native-English-
+  teacher role, the CEFR calibration, the scope delimitation (no
+  problem-solving, no code, no arithmetic, no deep reasoning) and the
+  grounding of the documented history as untrusted data.
+- [X] T123 [P] [Story] Add the evaluation adapter
+  (`app/adapters/external/ai/ollama_evaluator.py`): the strict CEFR
+  examiner role, the six criteria, and the FAIL-CLOSED verdict
+  (approved only with all six criteria present and passing).
+- [X] T124 [Story] Add the AI configuration
+  (`AI_PROVIDER`, `AI_BASE_URL`, `AI_GENERATION_MODEL`,
+  `AI_EVALUATION_MODEL`, the two token budgets, the request timeout
+  and `keep_alive`) and the `AI_BASE_URL` passthrough in
+  `compose.yaml` (the container reaches the host through
+  `host.docker.internal`, never `127.0.0.1`).
+- [X] T125 [Story] Wire the provider PAIR in the composition root
+  (`main.py`): the test environment keeps the deterministic pair, the
+  rest uses the Ollama pair, and the provider is primed at startup
+  (fail fast outside development/test, contained locally).
+- [X] T126 [Story] Give the assistant its own generation kind
+  (`GenerationInputs.kind`): the conversational envelope with the
+  `payload["reply"]` and the backward-compatible fallback.
+- [X] T127 [Story] Make the corrective loop's bound cover the
+  transient failures too (A-17: no separate transient-failure
+  counter) and assert the new invariant in the tests.
+- [X] T128 [Story] Add the adapter test suites with VCR cassettes
+  (`tests/adapters/test_ollama_client.py`,
+  `test_ollama_generator.py`, `test_ollama_evaluator.py`,
+  `test_ollama_content_gate.py`): the HTTP contract, the error
+  mapping, the role isolation, the fail-closed verdict and the
+  content validation gate with the real models (a good B1 material
+  approved; a programming lesson rejected and never delivered).
+- [X] T129 [Story] Update the documentation: the dependency
+  evaluation (the `niquests` row and the AI-provider authentication
+  note), the constitution compliance review (the two-model row, the
+  gate and the known pending items), the security review (the AI
+  provider section) and this file's research decision.
+
 ---
 
 ## Dependencies & Execution Order

@@ -20,7 +20,7 @@ from app.core.ports.content_evaluation_repository import ContentEvaluationReposi
 from app.core.ports.content_generation_repository import ContentGenerationRepository
 from app.utils.logging import get_logger, report_info
 
-from app.services.content.corrective_loop import CorrectiveLoop
+from app.services.content.corrective_loop import CorrectiveLoop, failure_event
 
 if TYPE_CHECKING:
     from app.core.entities.materials import GenerationInputs
@@ -155,12 +155,20 @@ class ContentWorkflowService:
         await self._audit.insert(
             AuditEvent(
                 owner_user_id=owner_user_id,
-                event_type="content.bound_exhausted"
-                if outcome.status == "bound_exhausted"
-                else "content.rejected",
+                event_type=failure_event(outcome.status),
                 payload={"attempt_number": outcome.attempt_number},
             )
         )
+        if outcome.status == "provider_failed":
+            # A permanent provider failure (unknown model, invalid
+            # request, unauthorized) is not a material problem: the
+            # provider itself is unavailable. The message stays generic
+            # (constitution principle X: no provider text to the user).
+            raise ServiceUnavailableError(
+                "ai_provider_unavailable",
+                "The content provider is not available right now; "
+                "please retry later.",
+            )
         # Contained failure: a clear error, no unapproved material returned.
         raise ServiceUnavailableError(
             "content_workflow_failed",

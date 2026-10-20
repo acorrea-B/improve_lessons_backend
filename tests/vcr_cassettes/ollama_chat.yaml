@@ -1,0 +1,56 @@
+interactions:
+- request:
+    body: '{"model":"glm-5.3-flash:cloud","messages":[{"role":"user","content":"Say
+      hello in one short sentence."}],"stream":false,"format":"json","keep_alive":"10m","options":{"num_predict":200,"temperature":0.4}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '203'
+      Content-Type:
+      - application/json;charset=utf-8
+      User-Agent:
+      - niquests/3.21.2
+    method: POST
+    uri: http://127.0.0.1:11434/api/chat
+  response:
+    body:
+      string: '{"model":"glm-5.3-flash","created_at":"2026-10-20T21:23:28.684601477Z","message":{"role":"assistant","content":"Hello
+        there, it''s great to see you!","thinking":"The user wants me to say hello
+        in one short sentence. This is a very simple request. I should just respond
+        with a brief greeting."},"done":true,"done_reason":"stop","total_duration":727778590,"prompt_eval_count":19,"prompt_eval_cached_count":0,"eval_count":40}
+
+        '
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 20 Oct 2026 21:23:28 GMT
+      Server:
+      - Google Frontend
+      Traceparent:
+      - 00-3b31d90ee86e08a0ca3e701d57f20b8b-9806387237551cfe-00
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      X-Build-Commit:
+      - 8b023f1dcd1aceee9db2ca40908f7e96ab2de35b
+      X-Build-Time:
+      - '2026-10-20T13:06:24-07:00'
+      X-Cloud-Trace-Context:
+      - 3b31d90ee86e08a0ca3e701d57f20b8b/10954505206831062270
+      X-Frame-Options:
+      - DENY
+      X-Request-Id:
+      - b5588b3c-3e81-4be2-821a-cd8a97eb62ae
+    status:
+      code: 200
+      message: OK
+version: 1

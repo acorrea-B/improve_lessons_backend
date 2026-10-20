@@ -156,11 +156,38 @@ enforcement).
   already provides exactly this with declarative graph definitions and
   checkpointing.
 
+### Provider decision (approved, T119)
+- **Provider family**: **Ollama** (native API `POST /api/chat`), serving
+  two DIFFERENT models — `minimax-m3.1-flash:cloud` for generation and
+  `glm-5.3-flash:cloud` for evaluation. Both are `:cloud` models: Ollama
+  proxies them to the provider's cloud, so the models do not run on the
+  host's hardware.
+- **Model identifiers are configuration, not code**: `AI_PROVIDER`,
+  `AI_BASE_URL`, `AI_GENERATION_MODEL`, `AI_EVALUATION_MODEL` and the
+  token budgets are environment variables with per-environment overrides.
+  The `ContentGenerator` / `ContentEvaluator` ports stay provider-agnostic,
+  so another provider can be added later without touching the services.
+- **Embeddings**: still the deterministic hash (`DeterministicEmbeddingProvider`).
+  Known pending item, documented in `docs/constitution_compliance.md`; the
+  real embedding adapter drops in behind the same port.
+- **Why not the Anthropic SDK**: the models are not Claude models. Calling
+  the Anthropic SDK against a third-party provider's endpoint is not the
+  provider's contract; the native Ollama API is. The native API is also
+  measurably more reliable here: it honours `format: "json"`, while the
+  Anthropic-compatible proxy silently discarded the equivalent field.
+- **HTTP client**: `niquests` in synchronous mode, wrapped in
+  `asyncio.to_thread` (the house pattern for synchronous clients). The
+  reason is test coverage, not latency: vcrpy intercepts the standard
+  `urllib3`, and niquests' async mode drives `urllib3-future` under an
+  internal alias that vcrpy does not patch, so the async mode would put
+  the test suite on the network. See `docs/dependency_evaluation.md`.
+- **Retry and recovery**: the corrective loop's bound is shared — a
+  transient provider failure consumes one attempt of the same bound as a
+  corrective revision (A-17: no separate transient-failure counter), so
+  the provider is called at most `bound` times. Permanent failures
+  (unknown model, invalid request) leave the loop at once.
+
 ### Open decisions (require approval before implementation)
-- **AI providers and model configuration** (generation + evaluation +
-  embedding). Two parallel approval paths:
-  1. The choice of provider family (Anthropic, OpenAI, etc.).
-  2. The specific model identifiers and their per-environment overrides.
 - **Chunking algorithm, chunk size, and overlap**.
 - **Retrieval and ranking strategy** (top-k, MMR, score threshold, recency
   weighting).
