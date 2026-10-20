@@ -1,0 +1,184 @@
+interactions:
+- request:
+    body: "{\"model\":\"glm-5.3-flash:cloud\",\"messages\":[{\"role\":\"system\",\"content\":\"You
+      are a strict CEFR examiner assessing English-learning material produced by another
+      teacher. You are an examiner, not an editor.\\n\\nYou assess the material against
+      exactly these six criteria:\\n1. vocabulary \u2014 the lexis matches the target
+      CEFR level: it uses what that level owns and does not stay below it. A1-A2 lexis
+      for a B1 learner fails this criterion.\\n2. grammar \u2014 the grammar is correct
+      and at the target level.\\n3. sentence_length \u2014 the sentences are of a
+      length a learner at that level can read.\\n4. reading_demands \u2014 the reading
+      passage asks what a learner at that level can do.\\n5. writing_demands \u2014
+      the writing exercises ask what a learner at that level can do.\\n6. relevance
+      \u2014 the material is grounded in the learner's documented history and matches
+      the requested purpose and level.\\n\\nEXPECTED LENGTH BY LEVEL (the passage
+      should be roughly this long):\\nA1 60-100 words, A2 90-140, B1 140-200, B2 180-240,
+      C1 200-280, C2 200-280.\\n\\nRULES:\\n- Judge only the material in front of
+      you. You never rewrite it, never repair it and never continue it: the teacher
+      who wrote it does the correcting.\\n- Approve only when all six criteria pass.
+      If any single criterion fails, the verdict is \\\"rejected\\\".\\n- Give a short,
+      specific rationale naming the failing criteria.\\n- If the material is not English-learning
+      material at all (for example code, arithmetic, programming instructions or any
+      other kind of problem-solving), reject it: the criterion \\\"relevance\\\" fails.\\n-
+      Answer with a single JSON object and nothing else. No markdown, no code fence,
+      no commentary before or after it. The JSON object must have exactly this shape,
+      with one entry for each of the six criteria:\\n\\nSCHEMA\\n{\\n  \\\"verdict\\\":
+      \\\"approved | rejected\\\",\\n  \\\"rationale\\\": \\\"<one short paragraph
+      explaining the verdict>\\\",\\n  \\\"criteria\\\": [\\n    {\\\"criterion\\\":
+      \\\"vocabulary\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n
+      \   {\\\"criterion\\\": \\\"grammar\\\", \\\"passed\\\": true, \\\"comment\\\":
+      \\\"<short comment>\\\"},\\n    {\\\"criterion\\\": \\\"sentence_length\\\",
+      \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n    {\\\"criterion\\\":
+      \\\"reading_demands\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"<short comment>\\\"},\\n
+      \   {\\\"criterion\\\": \\\"writing_demands\\\", \\\"passed\\\": true, \\\"comment\\\":
+      \\\"<short comment>\\\"},\\n    {\\\"criterion\\\": \\\"relevance\\\", \\\"passed\\\":
+      true, \\\"comment\\\": \\\"<short comment>\\\"}\\n  ]\\n}\"},{\"role\":\"user\",\"content\":\"Target
+      CEFR level: B1\\nRequested purpose: daily practice\\n\\nMaterial to assess:\\n{\\n
+      \ \\\"reading\\\": {\\n    \\\"title\\\": \\\"A Steady Start to the Day\\\",\\n
+      \   \\\"body\\\": \\\"Most people start the day with the same routine. They
+      wake up, drink a glass of water, and check their phones. However, small changes
+      can make the morning calmer and more productive.\\\\n\\\\nAmir usually gets
+      up at seven o\u2019clock. He never skips breakfast because he has a long walk
+      before work. First, he makes toast and tea. Then he brushes his teeth and gets
+      dressed. Although his flat is small, he keeps it tidy. On workdays, he leaves
+      home at half past seven. He often says hello to his neighbour, Mrs Patel, and
+      sometimes they talk about the weather.\\\\n\\\\nAt the weekend, Amir does not
+      wake up early. He usually reads for twenty minutes, but he never checks social
+      media before breakfast. In the evening, he cooks dinner and listens to music.
+      He enjoys simple routines because they help him feel relaxed and ready for the
+      next day.\\\\n\\\\nHow do you start your day? A small, steady habit may improve
+      your life.\\\",\\n    \\\"vocabulary\\\": [\\n      \\\"daily routine\\\",\\n
+      \     \\\"productive\\\",\\n      \\\"skip breakfast\\\",\\n      \\\"get dressed\\\",\\n
+      \     \\\"tidy\\\",\\n      \\\"workdays\\\",\\n      \\\"neighbour\\\",\\n
+      \     \\\"at the weekend\\\",\\n      \\\"social media\\\",\\n      \\\"feel
+      relaxed\\\"\\n    ]\\n  },\\n  \\\"writing_exercises\\\": [\\n    {\\n      \\\"prompt\\\":
+      \\\"Write 80\u2013100 words about your daily routine. Use the present simple
+      and at least four frequency adverbs, such as always, usually, often, sometimes,
+      and never. Include one reason with \u201Cbecause\u201D.\\\"\\n    },\\n    {\\n
+      \     \\\"prompt\\\": \\\"Compare your weekday routine with your weekend routine
+      in 60\u201380 words. Use \u201Chowever,\u201D \u201Cbut,\u201D and \u201Cafter.\u201D
+      Explain one thing you often do and one thing you never do.\\\"\\n    }\\n  ]\\n}\\n\\nAssess
+      the six criteria and answer with the JSON object now.\"}],\"stream\":false,\"format\":\"json\",\"keep_alive\":\"10m\",\"options\":{\"num_predict\":6000,\"temperature\":0.0}}"
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4504'
+      Content-Type:
+      - application/json;charset=utf-8
+      User-Agent:
+      - niquests/3.21.2
+    method: POST
+    uri: http://127.0.0.1:11434/api/chat
+  response:
+    body:
+      string: "{\"model\":\"glm-5.3-flash\",\"created_at\":\"2026-10-20T21:23:27.857748752Z\",\"message\":{\"role\":\"assistant\",\"content\":\"{\\n
+        \ \\\"verdict\\\": \\\"approved\\\",\\n  \\\"rationale\\\": \\\"The material
+        is appropriate for a B1 learner seeking daily practice. The reading passage
+        is about 170 words, within the 140-200 word target for B1, and uses B1-level
+        lexis (routine, productive, skip breakfast, tidy, social media) with correct
+        B1 grammar including frequency adverbs, 'although' and 'because' clauses,
+        and connectives like 'however'. Sentence lengths are manageable for the level.
+        The reading task (understanding a factual text on a familiar topic) and the
+        writing tasks (short connected personal texts with specified structures) both
+        match B1 descriptors, and the daily-routine theme fits the requested daily-practice
+        purpose.\\\",\\n  \\\"criteria\\\": [\\n    {\\\"criterion\\\": \\\"vocabulary\\\",
+        \\\"passed\\\": true, \\\"comment\\\": \\\"Uses genuine B1 lexis such as 'routine',
+        'productive', 'skip breakfast', 'tidy', 'social media'; does not stay below
+        level.\\\"},\\n    {\\\"criterion\\\": \\\"grammar\\\", \\\"passed\\\": true,
+        \\\"comment\\\": \\\"Correct present simple, frequency adverbs, 'although'/'because'
+        clauses and comparatives, all at B1 level.\\\"},\\n    {\\\"criterion\\\":
+        \\\"sentence_length\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"Sentences
+        are mostly 8-16 words with simple linking, well within B1 reading comfort.\\\"},\\n
+        \   {\\\"criterion\\\": \\\"reading_demands\\\", \\\"passed\\\": true, \\\"comment\\\":
+        \\\"A straightforward factual narrative on a familiar topic with mild connective
+        demands, matching B1 reading descriptors.\\\"},\\n    {\\\"criterion\\\":
+        \\\"writing_demands\\\", \\\"passed\\\": true, \\\"comment\\\": \\\"Short
+        guided personal texts (80-100 and 60-80 words) with specified structures are
+        appropriate B1 writing tasks.\\\"},\\n    {\\\"criterion\\\": \\\"relevance\\\",
+        \\\"passed\\\": true, \\\"comment\\\": \\\"Daily-routine theme with practical
+        habit focus suits the requested daily-practice purpose at B1.\\\"}\\n  ]\\n}\",\"thinking\":\"Let
+        me assess this B1 material against the six criteria.\\n\\n1. Vocabulary: The
+        passage uses words like \\\"routine\\\", \\\"productive\\\", \\\"skip breakfast\\\",
+        \\\"get dressed\\\", \\\"tidy\\\", \\\"workdays\\\", \\\"neighbour\\\", \\\"social
+        media\\\", \\\"relaxed\\\". Are these B1-appropriate? \\\"Productive\\\" is
+        B2-ish but arguably B1. \\\"Tidy\\\" is A2/B1. \\\"Routine\\\" is B1. \\\"Social
+        media\\\" is B1. \\\"However\\\" is B1. \\\"Although\\\" is B1. The vocabulary
+        list includes frequency adverbs and daily routine vocabulary which is solidly
+        B1 territory. The material uses B1 lexis \u2014 \\\"productive\\\", \\\"steady\\\",
+        \\\"improve\\\", \\\"calmer\\\". I'd say vocabulary passes. It doesn't stay
+        below B1 \u2014 it includes B1 items like \\\"productive\\\", \\\"skip\\\",
+        \\\"tidy\\\", \\\"routine\\\", \\\"social media\\\". Pass.\\n\\n2. Grammar:
+        Present simple, frequency adverbs, \\\"although\\\" clauses, \\\"because\\\"
+        clauses, comparatives (\\\"calmer and more productive\\\"). All correct and
+        at B1 level. \\\"Although his flat is small, he keeps it tidy.\\\" Correct.
+        Pass.\\n\\n3. Sentence length: Sentences are moderate \u2014 mostly 8-15 words,
+        some compound sentences. Appropriate for B1. Pass.\\n\\n4. Reading demands:
+        The passage asks learners to read a descriptive text about daily routines
+        with some connectives (however, although). That's within B1 reading \u2014
+        can understand straightforward factual texts about familiar topics. Pass.\\n\\n5.
+        Writing demands: Write 80-100 words about daily routine using present simple
+        and frequency adverbs, one reason with \\\"because\\\". Compare weekday/weekend
+        routines using \\\"however\\\", \\\"but\\\", \\\"after\\\". These are B1-appropriate
+        writing tasks \u2014 connected text on familiar topics, simple linked sentences.
+        Pass.\\n\\n6. Relevance: The material is grounded in... hmm, \\\"grounded
+        in the learner's documented history\\\". We don't have learner history provided
+        here. The requested purpose is \\\"daily practice\\\" and level B1. The material
+        is a daily routine reading + writing exercises \u2014 fits daily practice
+        and B1. There's no documented history given, so I can't fault it on that;
+        it matches the requested purpose and level. Pass.\\n\\nLength check: The passage
+        word count. Let me count roughly:\\n\\nParagraph 1: \\\"Most people start
+        the day with the same routine. They wake up, drink a glass of water, and check
+        their phones. However, small changes can make the morning calmer and more
+        productive.\\\" ~33 words.\\n\\nParagraph 2: \\\"Amir usually gets up at seven
+        o'clock. He never skips breakfast because he has a long walk before work.
+        First, he makes toast and tea. Then he brushes his teeth and gets dressed.
+        Although his flat is small, he keeps it tidy. On workdays, he leaves home
+        at half past seven. He often says hello to his neighbour, Mrs Patel, and sometimes
+        they talk about the weather.\\\" ~72 words.\\n\\nParagraph 3: \\\"At the weekend,
+        Amir does not wake up early. He usually reads for twenty minutes, but he never
+        checks social media before breakfast. In the evening, he cooks dinner and
+        listens to music. He enjoys simple routines because they help him feel relaxed
+        and ready for the next day.\\\" ~50 words.\\n\\nParagraph 4: \\\"How do you
+        start your day? A small, steady habit may improve your life.\\\" ~14 words.\\n\\nTotal
+        ~169 words. B1 target is 140-200. Good.\\n\\nVerdict: approved.\\n\\nOne consideration:
+        \\\"productive\\\" \u2014 is that B1? CEFR wordlists: \\\"productive\\\" isn't
+        in the A1-A2 lists; it's around B2 in English Vocabulary Profile actually.
+        But for B1 material, slightly above-level vocabulary is acceptable \u2014
+        the criterion says lexis matches target level: uses what that level owns and
+        does not stay below it. A word slightly above is fine for B1 (learners can
+        infer). The main failure mode is staying below the level. So pass.\\n\\n\\\"steady\\\"
+        in title \u2014 B1/B2. Fine.\\n\\nAll criteria pass. Output JSON only.\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":7721038194,\"prompt_eval_count\":986,\"prompt_eval_cached_count\":0,\"eval_count\":1274}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 20 Oct 2026 21:23:27 GMT
+      Server:
+      - Google Frontend
+      Traceparent:
+      - 00-745568def7ede85abcee2cdcce53dbf9-e8e31079eb925b56-00
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      X-Build-Commit:
+      - 8b023f1dcd1aceee9db2ca40908f7e96ab2de35b
+      X-Build-Time:
+      - '2026-10-20T13:06:24-07:00'
+      X-Cloud-Trace-Context:
+      - 745568def7ede85abcee2cdcce53dbf9/16781274752341924694
+      X-Frame-Options:
+      - DENY
+      X-Request-Id:
+      - 888997ce-a4d4-4dfa-b4ac-59be0c79e3ed
+    status:
+      code: 200
+      message: OK
+version: 1

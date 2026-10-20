@@ -64,6 +64,34 @@ class Settings:
     smtp_port: int = field(default_factory=lambda: int(os.getenv("SMTP_PORT", "25")))
     smtp_user: str = field(default_factory=lambda: os.getenv("SMTP_USER", ""))
     smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
+    # AI provider (US-12, T119). "ollama" talks the Ollama native API
+    # (POST /api/chat); "deterministic" keeps the local stub pair. The
+    # unit-test environment always uses the deterministic pair (no network).
+    ai_provider: str = field(default_factory=lambda: os.getenv("AI_PROVIDER", "ollama"))
+    # Base URL of the Ollama server. The default points at the Docker host
+    # because the backend runs in Compose and cannot see 127.0.0.1 of the
+    # host; in a real environment this is the provider's network hostname.
+    ai_base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "AI_BASE_URL", "http://host.docker.internal:11434"
+        )
+    )
+    ai_generation_model: str = field(
+        default_factory=lambda: os.getenv("AI_GENERATION_MODEL", "minimax-m3.1-flash:cloud")
+    )
+    ai_evaluation_model: str = field(
+        default_factory=lambda: os.getenv("AI_EVALUATION_MODEL", "glm-5.3-flash:cloud")
+    )
+    ai_generation_max_tokens: int = field(
+        default_factory=lambda: int(os.getenv("AI_GENERATION_MAX_TOKENS", "8000"))
+    )
+    ai_evaluation_max_tokens: int = field(
+        default_factory=lambda: int(os.getenv("AI_EVALUATION_MAX_TOKENS", "6000"))
+    )
+    ai_request_timeout_seconds: int = field(
+        default_factory=lambda: int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "180"))
+    )
+    ai_keep_alive: str = field(default_factory=lambda: os.getenv("AI_KEEP_ALIVE", "10m"))
 
     def validate_mandatory(self) -> "Settings":
         """Refuse to start when mandatory configuration is missing."""

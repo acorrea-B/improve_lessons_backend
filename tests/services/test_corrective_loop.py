@@ -141,6 +141,79 @@ class TestCorrectiveLoop(unittest.TestCase):
         outcome = run(flow())
         self.assertEqual(outcome.status, "bound_exhausted")
 
+    def test_provider_calls_never_exceed_the_bound(self):
+        """A-17: the transient failures consume the SAME bound as the
+        corrective revisions — no separate transient-failure counter is
+        maintained, so the provider is called at most `bound` times."""
+        from asyncio import run
+
+        for bound in (1, 2, 3, 5):
+            for failures in (0, 1, 2, 99):
+                generator = CountingGenerator(failures=failures)
+                loop = CorrectiveLoop(
+                    generator, DeterministicContentEvaluator(), bound=bound
+                )
+                outcome = run(loop.run("instruction", inputs()))
+                self.assertLessEqual(
+                    generator.calls,
+                    bound,
+                    f"bound={bound} failures={failures} calls={generator.calls}",
+                )
+
+    def test_rejections_and_transient_failures_share_the_bound(self):
+        """Mixed failures: the transient ones do not buy extra revisions."""
+        from asyncio import run
+
+        generator = CountingGenerator(failures=1)
+        loop = CorrectiveLoop(
+            generator, FailingEvaluator(rejections=99), bound=3
+        )
+        outcome = run(loop.run("instruction", inputs()))
+        self.assertEqual(outcome.status, "bound_exhausted")
+        self.assertEqual(generator.calls, 3)
+
+    def test_transient_failures_produce_no_attempt_rows(self):
+        """A transient failure yields neither a generation nor an
+        evaluation, so the attempt/evaluation correspondence stays
+        aligned (the audit trail numbers the real material only)."""
+        from asyncio import run
+
+        generator = CountingGenerator(failures=2)
+        loop = CorrectiveLoop(
+            generator, DeterministicContentEvaluator(), bound=3
+        )
+        outcome = run(loop.run("instruction", inputs()))
+        self.assertTrue(outcome.approved)
+        self.assertEqual(len(outcome.attempts), 1)
+        self.assertEqual(len(outcome.evaluations), 1)
+
+    def test_a_permanent_provider_failure_ends_the_loop_at_once(self):
+        """A permanent failure is not retried: it leaves the loop
+        immediately (retrying is pointless)."""
+        from asyncio import run
+
+        from app.core.ports.ai_errors import NonTransientAIError
+
+        class PermanentlyFailingGenerator:
+            model_id = "test-generator"
+
+            def __init__(self) -> None:
+                self.calls = 0
+
+            async def generate(self, instruction, inputs):
+                self.calls += 1
+                raise NonTransientAIError("model not found")
+
+        generator = PermanentlyFailingGenerator()
+        loop = CorrectiveLoop(
+            generator, DeterministicContentEvaluator(), bound=3
+        )
+        outcome = run(loop.run("instruction", inputs()))
+        self.assertEqual(outcome.status, "provider_failed")
+        self.assertFalse(outcome.approved)
+        self.assertEqual(generator.calls, 1)  # NOT retried up to the bound
+        self.assertEqual(outcome.evaluations, [])
+
 
 if __name__ == "__main__":
     unittest.main()

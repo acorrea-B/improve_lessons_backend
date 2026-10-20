@@ -10,8 +10,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from app.core.ports.ai_errors import TransientAIError
+
 if TYPE_CHECKING:
     from app.core.entities.materials import GenerationInputs
+
+__all__ = [
+    "ContentGenerator",
+    "GeneratedContent",
+    "TransientAIError",
+]
 
 
 class GeneratedContent:
@@ -21,11 +29,6 @@ class GeneratedContent:
         self.model_id = model_id
         self.payload = payload
         self.raw_output = raw_output
-
-
-class TransientAIError(Exception):
-    """Retryable transient provider failure (absorbed by the corrective
-    loop within the same bound; constitution principle X)."""
 
 
 class ContentGenerator(ABC):

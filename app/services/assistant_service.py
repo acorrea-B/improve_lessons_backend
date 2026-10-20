@@ -140,14 +140,20 @@ class AssistantService:
             cefr_level=user.cefr_level.value,
             purpose="assistant conversational reply",
             history_slice=context_texts,
+            kind="conversational",
         )
         reply = await self._generator.generate(
             _assistant_instruction(user, content, context_texts), inputs
         )
         payload = reply.payload
-        reply_text = payload.get("reading", {}).get(
-            "body", ""
-        ) or "I could not ground an answer in your documented history yet."
+        # The conversational envelope carries the reply under "reply"; the
+        # "reading.body" fallback keeps the previous contract working
+        # (the deterministic stub still answers with a reading body).
+        reply_text = (
+            payload.get("reply")
+            or payload.get("reading", {}).get("body", "")
+            or "I could not ground an answer in your documented history yet."
+        )
         assistant_message = ThreadMessage(
             role="assistant", content=reply_text, sent_at=now_utc()
         )

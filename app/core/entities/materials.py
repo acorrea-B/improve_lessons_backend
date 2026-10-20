@@ -32,6 +32,11 @@ class GenerationInputs(BaseModel):
     purpose: str
     history_slice: list[str] = Field(default_factory=list)
     period_objective: str | None = None
+    #: What the generation model is asked to produce:
+    #: ``"material"`` (curricular reading + writing exercises, the default)
+    #: or ``"conversational"`` (an assistant reply). The two shapes have
+    #: different envelopes; the default keeps the historical behaviour.
+    kind: str = "material"
 
 
 class DailyMaterial(Entity):
